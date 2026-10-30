@@ -24,13 +24,15 @@ if %errorlevel% neq 0 (
 
 echo     [OK] Permisos de Administrador verificados
 echo.
-echo     [1] PC DE ESCRITORIO
-echo     [2] NOTEBOOK / LAPTOP
+echo     [1] OPTIMIZAR PC DE ESCRITORIO
+echo     [2] OPTIMIZAR NOTEBOOK / LAPTOP
+echo     [3] REVERTIR CAMBIOS / RESTAURAR TODO POR DEFECTO
 echo     [0] Salir
 echo.
-set /p "pctype=    Elegir tipo de equipo [1/2/0]: "
+set /p "pctype=    Elegir opcion [1/2/3/0]: "
 
 if "%pctype%"=="0" exit /b
+if "%pctype%"=="3" goto :revertir
 if "%pctype%"=="1" (
     set "modename=PC DE ESCRITORIO"
     set "isdesk=1"
@@ -156,6 +158,64 @@ echo.
 
 echo     ============================================================
 echo     OPTIMIZACION COMPLETADA CON EXITO
+echo     ============================================================
+echo.
+pause
+exit /b
+
+:revertir
+cls
+echo.
+echo     ============================================================
+echo     RESTAURANDO CONFIGURACION POR DEFECTO DE WINDOWS
+echo     ============================================================
+echo.
+echo     [1/8] Restaurando animaciones y transparencias...
+reg add "HKCU\Control Panel\Desktop" /v "MenuShowDelay" /t REG_SZ /d "400" /f >nul 2>&1
+reg add "HKCU\Control Panel\Desktop" /v "DragFullWindows" /t REG_SZ /d "1" /f >nul 2>&1
+reg add "HKCU\Control Panel\Desktop\WindowMetrics" /v "MinAnimate" /t REG_SZ /d "1" /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "TaskbarAnimations" /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v "EnableTransparency" /t REG_DWORD /d 1 /f >nul 2>&1
+
+echo     [2/8] Restaurando notificaciones...
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\PushNotifications" /v "ToastEnabled" /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\Software\Policies\Microsoft\Windows\Explorer" /v "DisableNotificationCenter" /t REG_DWORD /d 0 /f >nul 2>&1
+
+echo     [3/8] Restaurando plan de energia Equilibrado e hibernacion...
+powercfg -setactive 381b4222-f694-41f0-9685-ff5bb260df2e >nul 2>&1
+powercfg -h on >nul 2>&1
+
+echo     [4/8] Restaurando servicios del sistema...
+for %%s in (DiagTrack SysMain MapsBroker WSearch) do (
+    sc config %%s start= auto >nul 2>&1
+    sc start %%s >nul 2>&1
+)
+for %%s in (dmwappushservice RetailDemo wisvc WerSvc Fax XblAuthManager XblGameSave XboxGipSvc XboxNetApiSvc lfsvc) do (
+    sc config %%s start= demand >nul 2>&1
+)
+
+echo     [5/8] Reactivando apps en segundo plano...
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" /v "GlobalUserDisabled" /t REG_DWORD /d 0 /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy" /v "LetAppsRunInBackground" /f >nul 2>&1
+
+echo     [6/8] Restaurando busqueda web y Cortana...
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Search" /v "AllowCortana" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Search" /v "DisableWebSearch" /f >nul 2>&1
+
+echo     [7/8] Restaurando Xbox Game Bar...
+reg add "HKCU\Software\Microsoft\GameBar" /v "UseNexusForGameBarEnabled" /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\System\GameConfigStore" /v "GameDVR_Enabled" /t REG_DWORD /d 1 /f >nul 2>&1
+
+echo     [8/8] Restaurando red y telemetria...
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v "TcpAckFrequency" /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v "TCPNoDelay" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection" /v "AllowTelemetry" /f >nul 2>&1
+reg delete "HKCU\Software\Microsoft\Siuf\Rules" /v "NumberOfSIUFInPeriod" /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo" /v "Enabled" /t REG_DWORD /d 1 /f >nul 2>&1
+
+echo.
+echo     ============================================================
+echo     RESTAURACION COMPLETADA. Reinicia el equipo para finalizar.
 echo     ============================================================
 echo.
 pause

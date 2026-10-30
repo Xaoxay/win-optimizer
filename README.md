@@ -1,6 +1,6 @@
 # 🚀 Windows 10 & 11 Optimizer (Win-Optimizer)
 
-Herramienta interactiva y automatizada para optimizar Windows 10 y Windows 11 en **PC de Escritorio** y **Notebooks / Laptops**.
+Herramienta interactiva y automatizada para optimizar Windows 10 y Windows 11 en **PC de Escritorio** y **Notebooks / Laptops**, con opción de **Reversión completa a valores por defecto**.
 
 ## ⚡ Ejecución Rápida
 
@@ -12,28 +12,25 @@ irm https://raw.githubusercontent.com/Xaoxay/win-optimizer/main/Optimizar-Window
 
 ---
 
-### Opción 2: Comando directo local (en tu PC)
+### Opción 2: Desde el Símbolo del Sistema (CMD Admin)
+```cmd
+powershell -ep bypass -c "irm https://raw.githubusercontent.com/Xaoxay/win-optimizer/main/Optimizar-Windows.ps1 | iex"
+```
+
+---
+
+### Opción 3: Comando directo local (en tu PC)
 Si ya lo tenés instalado en tu máquina, abrí cualquier consola (CMD, PowerShell o `Win + R`) y escribí:
 ```cmd
 optimizar
 ```
-*(Si no tenías permisos de Administrador, te pedirá confirmación de UAC automáticamente)*.
 
 ---
 
-### Opción 3: Ejecutar archivo local vía PowerShell
-```powershell
-powershell -ExecutionPolicy Bypass -File "$HOME\.gemini\antigravity\scratch\win-optimizer\Optimizar-Windows.ps1"
-```
+## 🎯 Menú y Características
 
----
-
-## 🎯 Características
-
-- **Menú Interactivo**: Elegí entre **PC de Escritorio** o **Notebook/Laptop**.
+- `[1] PC DE ESCRITORIO`: Plan Ultimate Performance, baja latencia de red, desactiva Search Indexer y telemetría.
+- `[2] NOTEBOOK / LAPTOP`: Plan High Performance en AC y Balanced en batería, conservando GPS y Windows Search, eliminando hibernación para liberar GB de espacio.
+- `[3] REVERTIR CAMBIOS`: Restaura todas las configuraciones originales de Windows (animaciones, notificaciones, servicios en segundo plano, energía equilibrada, hibernación y telemetría).
 - **Barra de Progreso Animada**: Visualizá en tiempo real el porcentaje y avance de cada tarea.
-- **Paso a Paso o Todo Automático**: Vos decidís si querés confirmar cada paso (`S/N/T`) o hacer todo de una sola vez.
-- **Punto de Restauración Automático**: Por seguridad, crea un respaldo del sistema antes de modificar nada.
-- **Optimizaciones específicas**:
-  - **Escritorio**: Plan Ultimate Performance, baja latencia de red para juegos, desactivación de Search Indexer y telemetría.
-  - **Notebook**: Plan High Performance en AC y Balanced en batería, conservando GPS ("Encontrar mi dispositivo") y Windows Search, eliminando la hibernación para liberar gigabytes de almacenamiento.
+- **Punto de Restauración Automático**: Crea un respaldo del sistema antes de modificar nada.

@@ -106,26 +106,25 @@ if ($DryRun) {
 }
 
 # ============================================================================
-# SELECCION DE EQUIPO
+# MENU PRINCIPAL
 # ============================================================================
 
 $pcType = $Type
-if ($pcType -ne "1" -and $pcType -ne "2") {
-    Write-Host "    Que tipo de equipo queres optimizar?" -ForegroundColor White
+if ($pcType -ne "1" -and $pcType -ne "2" -and $pcType -ne "3") {
+    Write-Host "    Que deseas hacer?" -ForegroundColor White
     Write-Host ""
-    Write-Host "    [1] PC DE ESCRITORIO / DESKTOP" -ForegroundColor White
-    Write-Host "        - Plan Ultimate Performance" -ForegroundColor Gray
-    Write-Host "        - Optimizacion de red para juegos (baja latencia)" -ForegroundColor Gray
-    Write-Host "        - Desactiva Search Indexer y Geolocalizacion" -ForegroundColor Gray
+    Write-Host "    [1] OPTIMIZAR PC DE ESCRITORIO / DESKTOP" -ForegroundColor White
+    Write-Host "        Plan Ultimate Performance, baja latencia, servicios apagados" -ForegroundColor Gray
     Write-Host ""
-    Write-Host "    [2] NOTEBOOK / LAPTOP" -ForegroundColor White
-    Write-Host "        - High Performance enchufado, Balanced con bateria" -ForegroundColor Gray
-    Write-Host "        - Conserva Search y GPS (Encontrar mi dispositivo)" -ForegroundColor Gray
-    Write-Host "        - Desactiva hibernacion (libera GB de espacio)" -ForegroundColor Gray
+    Write-Host "    [2] OPTIMIZAR NOTEBOOK / LAPTOP" -ForegroundColor White
+    Write-Host "        High Perf enchufado, conserva GPS/Search, libera espacio en disco" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "    [3] REVERTIR CAMBIOS / RESTAURAR TODO POR DEFECTO" -ForegroundColor Yellow
+    Write-Host "        Vuelve todas las animaciones, notificaciones, servicios y energia al estado original" -ForegroundColor DarkYellow
     Write-Host ""
     Write-Host "    [0] Salir" -ForegroundColor Gray
     Write-Host ""
-    Write-Host "    Elegir opcion [1/2/0] > " -NoNewline -ForegroundColor Yellow
+    Write-Host "    Elegir opcion [1/2/3/0] > " -NoNewline -ForegroundColor Yellow
     $pcType = Read-Host
 }
 
@@ -134,14 +133,214 @@ if ($pcType -eq "0" -or [string]::IsNullOrWhiteSpace($pcType)) {
     exit
 }
 
+# ============================================================================
+# OPCION 3: REVERTIR TODO A VALORES POR DEFECTO
+# ============================================================================
+
+if ($pcType -eq "3") {
+    Clear-Host
+    Show-Banner
+    Write-Host "    ============================================================" -ForegroundColor Yellow
+    Write-Host "    RESTAURAR CONFIGURACION POR DEFECTO DE WINDOWS" -ForegroundColor Yellow
+    Write-Host "    ============================================================" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "    Esta opcion devolvera:" -ForegroundColor White
+    Write-Host "    - Todas las animaciones y efectos de transparencia de Windows" -ForegroundColor Gray
+    Write-Host "    - Todas las notificaciones y Centro de Accion" -ForegroundColor Gray
+    Write-Host "    - Plan de energia Equilibrado (Balanced)" -ForegroundColor Gray
+    Write-Host "    - Servicios originales en segundo plano (SysMain, Telemetria, Xbox)" -ForegroundColor Gray
+    Write-Host "    - Permisos para aplicaciones en segundo plano" -ForegroundColor Gray
+    Write-Host "    - Cortana y busqueda web en Inicio" -ForegroundColor Gray
+    Write-Host "    - Xbox Game Bar y Game DVR" -ForegroundColor Gray
+    Write-Host "    - Parametros de red estandar" -ForegroundColor Gray
+    Write-Host "    - Hibernacion reactivada" -ForegroundColor Gray
+    Write-Host ""
+
+    if (-not $DryRun) {
+        Write-Host "    Seguro que deseas restaurar todo a como estaba antes? [S/N] > " -NoNewline -ForegroundColor Yellow
+        $confRevert = Read-Host
+        if ($confRevert -ne "S" -and $confRevert -ne "s") {
+            Write-Host "    Operacion cancelada." -ForegroundColor Gray
+            exit
+        }
+    }
+
+    Write-Host ""
+    Write-Host "    Iniciando restauracion del sistema..." -ForegroundColor Yellow
+    Write-Host ""
+
+    # 1. Animaciones
+    Show-ProgressBar -Percent 10 -Status "Restaurando animaciones y transparencias..."
+    if (-not $DryRun) {
+        Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "UserPreferencesMask" -Value ([byte[]](0x9E,0x3E,0x07,0x80,0x12,0x00,0x00,0x00)) -Type Binary -Force
+        Set-ItemProperty -Path "HKCU:\Control Panel\Desktop\WindowMetrics" -Name "MinAnimate" -Value "1" -Force
+        Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarAnimations" -Value 1 -Force
+        $pp = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
+        if (Test-Path $pp) { Set-ItemProperty -Path $pp -Name "EnableTransparency" -Value 1 -Force }
+        Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "DragFullWindows" -Value "1" -Force
+        Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name "MenuShowDelay" -Value "400" -Force
+        New-ItemProperty -Path "HKCU:\Control Panel\Desktop\WindowMetrics" -Name "AnimationEnabled" -Value 1 -PropertyType String -Force | Out-Null
+    }
+    Start-Sleep -Milliseconds 250
+    Show-ProgressComplete "Animaciones y transparencias restauradas"
+
+    # 2. Notificaciones
+    Show-ProgressBar -Percent 20 -Status "Restaurando notificaciones y sugerencias..."
+    if (-not $DryRun) {
+        $pushPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\PushNotifications"
+        if (Test-Path $pushPath) { Set-ItemProperty -Path $pushPath -Name "ToastEnabled" -Value 1 -Force }
+        $np = "HKCU:\Software\Policies\Microsoft\Windows\Explorer"
+        if (Test-Path $np) { Set-ItemProperty -Path $np -Name "DisableNotificationCenter" -Value 0 -Force }
+        $cdm = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        $keys = @("SubscribedContent-338389Enabled","SubscribedContent-310093Enabled","SubscribedContent-338388Enabled","SubscribedContent-353698Enabled","SoftLandingEnabled","SystemPaneSuggestionsEnabled","RotatingLockScreenEnabled","RotatingLockScreenOverlayEnabled")
+        foreach ($k in $keys) {
+            Set-ItemProperty -Path $cdm -Name $k -Value 1 -Force -ErrorAction SilentlyContinue
+        }
+    }
+    Start-Sleep -Milliseconds 250
+    Show-ProgressComplete "Notificaciones y Centro de Accion restaurados"
+
+    # 3. Plan de Energia
+    Show-ProgressBar -Percent 35 -Status "Restaurando plan de energia Equilibrado..."
+    if (-not $DryRun) {
+        # Plan Equilibrado estándar de Windows
+        powercfg -setactive 381b4222-f694-41f0-9685-ff5bb260df2e 2>$null
+        powercfg -change -disk-timeout-ac 20
+        powercfg -change -standby-timeout-ac 30
+        powercfg -change -monitor-timeout-ac 10
+        powercfg -change -disk-timeout-dc 10
+        powercfg -change -standby-timeout-dc 15
+        powercfg -change -monitor-timeout-dc 5
+        powercfg -h on 2>$null
+    }
+    Start-Sleep -Milliseconds 250
+    Show-ProgressComplete "Plan Equilibrado (Balanced) e hibernacion reactivados"
+
+    # 4. Servicios
+    Show-ProgressBar -Percent 50 -Status "Restaurando servicios del sistema..."
+    $restoreSvcs = @(
+        @{Name="DiagTrack";          Type="Automatic"; Start=$true},
+        @{Name="dmwappushservice";   Type="Manual";    Start=$false},
+        @{Name="SysMain";            Type="Automatic"; Start=$true},
+        @{Name="MapsBroker";         Type="Automatic"; Start=$false},
+        @{Name="RetailDemo";         Type="Manual";    Start=$false},
+        @{Name="wisvc";              Type="Manual";    Start=$false},
+        @{Name="WerSvc";             Type="Manual";    Start=$false},
+        @{Name="Fax";                Type="Manual";    Start=$false},
+        @{Name="XblAuthManager";     Type="Manual";    Start=$false},
+        @{Name="XblGameSave";        Type="Manual";    Start=$false},
+        @{Name="XboxGipSvc";         Type="Manual";    Start=$false},
+        @{Name="XboxNetApiSvc";      Type="Manual";    Start=$false},
+        @{Name="WSearch";            Type="Automatic"; Start=$true},
+        @{Name="lfsvc";              Type="Manual";    Start=$false},
+        @{Name="RemoteRegistry";     Type="Disabled";  Start=$false}
+    )
+    if (-not $DryRun) {
+        foreach ($s in $restoreSvcs) {
+            $service = Get-Service -Name $s.Name -ErrorAction SilentlyContinue
+            if ($service) {
+                Set-Service -Name $s.Name -StartupType $s.Type -ErrorAction SilentlyContinue
+                if ($s.Start) { Start-Service -Name $s.Name -ErrorAction SilentlyContinue }
+            }
+        }
+    }
+    Start-Sleep -Milliseconds 250
+    Show-ProgressComplete "Servicios del sistema restaurados a sus valores estandar"
+
+    # 5. Apps en segundo plano
+    Show-ProgressBar -Percent 65 -Status "Reactivando aplicaciones en segundo plano..."
+    if (-not $DryRun) {
+        $bgPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications"
+        if (Test-Path $bgPath) { Set-ItemProperty -Path $bgPath -Name "GlobalUserDisabled" -Value 0 -Force }
+        $bgPol = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy"
+        if (Test-Path $bgPol) { Remove-ItemProperty -Path $bgPol -Name "LetAppsRunInBackground" -Force -ErrorAction SilentlyContinue }
+    }
+    Start-Sleep -Milliseconds 250
+    Show-ProgressComplete "Permisos de apps en fondo restaurados"
+
+    # 6. Cortana y busqueda web
+    Show-ProgressBar -Percent 75 -Status "Restaurando busqueda web y Cortana..."
+    if (-not $DryRun) {
+        $sp = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search"
+        if (Test-Path $sp) {
+            Remove-ItemProperty -Path $sp -Name "AllowCortana" -Force -ErrorAction SilentlyContinue
+            Remove-ItemProperty -Path $sp -Name "DisableWebSearch" -Force -ErrorAction SilentlyContinue
+            Remove-ItemProperty -Path $sp -Name "ConnectedSearchUseWeb" -Force -ErrorAction SilentlyContinue
+        }
+    }
+    Start-Sleep -Milliseconds 250
+    Show-ProgressComplete "Busqueda web de Windows restaurada"
+
+    # 7. Xbox Game Bar
+    Show-ProgressBar -Percent 85 -Status "Restaurando Xbox Game Bar..."
+    if (-not $DryRun) {
+        $gb = "HKCU:\Software\Microsoft\GameBar"
+        if (Test-Path $gb) {
+            Set-ItemProperty -Path $gb -Name "UseNexusForGameBarEnabled" -Value 1 -Force
+            Set-ItemProperty -Path $gb -Name "AutoGameModeEnabled" -Value 1 -Force
+        }
+        $gd = "HKCU:\System\GameConfigStore"
+        if (Test-Path $gd) { Set-ItemProperty -Path $gd -Name "GameDVR_Enabled" -Value 1 -Force }
+        $gdp = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\GameDVR"
+        if (Test-Path $gdp) { Remove-ItemProperty -Path $gdp -Name "AllowGameDVR" -Force -ErrorAction SilentlyContinue }
+    }
+    Start-Sleep -Milliseconds 250
+    Show-ProgressComplete "Xbox Game Bar restaurada"
+
+    # 8. Red, Privacidad y Telemetria
+    Show-ProgressBar -Percent 95 -Status "Restaurando red y privacidad..."
+    if (-not $DryRun) {
+        $netP = "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters"
+        Remove-ItemProperty -Path $netP -Name "TcpAckFrequency" -Force -ErrorAction SilentlyContinue
+        Remove-ItemProperty -Path $netP -Name "TCPNoDelay" -Force -ErrorAction SilentlyContinue
+        netsh int tcp set global autotuninglevel=normal 2>$null | Out-Null
+        
+        $tp = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection"
+        if (Test-Path $tp) { Remove-ItemProperty -Path $tp -Name "AllowTelemetry" -Force -ErrorAction SilentlyContinue }
+        
+        $fp = "HKCU:\Software\Microsoft\Siuf\Rules"
+        if (Test-Path $fp) { Remove-ItemProperty -Path $fp -Name "NumberOfSIUFInPeriod" -Force -ErrorAction SilentlyContinue }
+        
+        Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo" -Name "Enabled" -Value 1 -Force
+    }
+    Start-Sleep -Milliseconds 250
+    Show-ProgressBar -Percent 100 -Status "Listo"
+    Show-ProgressComplete "Parametros de red y privacidad restaurados"
+
+    Write-Host ""
+    Write-Host "    ============================================================" -ForegroundColor Green
+    Write-Host "    RESTAURACION COMPLETADA CON EXITO" -ForegroundColor Green
+    Write-Host "    Todos los valores originales de Windows fueron restablecidos." -ForegroundColor White
+    Write-Host "    ============================================================" -ForegroundColor Green
+    Write-Host ""
+
+    if ($DryRun) {
+        Write-Host "    [TEST EXITOSO] Simulacion de restauracion completada." -ForegroundColor Magenta
+        exit
+    }
+
+    Write-Host "    Se recomienda reiniciar la PC para aplicar todos los cambios." -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "    Deseas reiniciar ahora? [S/N] > " -NoNewline -ForegroundColor Yellow
+    $restart = Read-Host
+    if ($restart -eq "S" -or $restart -eq "s") {
+        Write-Host "    Reiniciando en 5 segundos..." -ForegroundColor Cyan
+        Restart-Computer -Force
+    } else {
+        Write-Host "    Recorda reiniciar cuando puedas." -ForegroundColor Gray
+    }
+    exit
+}
+
+# ============================================================================
+# OPTIMIZACION (OPCION 1 Y 2)
+# ============================================================================
+
 $isDesktop = ($pcType -eq "1")
 $typeName = "NOTEBOOK / LAPTOP"
 if ($isDesktop) { $typeName = "PC DE ESCRITORIO" }
 
-# ============================================================================
-# MODO DE EJECUCION
-# ============================================================================
-
+# Modo de ejecucion
 $autoMode = $false
 if (-not $DryRun) {
     Write-Host ""
@@ -157,10 +356,6 @@ if (-not $DryRun) {
 }
 
 $askAll = -not $autoMode
-
-# ============================================================================
-# PLAN DE PASOS
-# ============================================================================
 
 $totalSteps = 10
 Clear-Host
@@ -193,10 +388,7 @@ if (-not $autoMode) {
     }
 }
 
-# ============================================================================
-# PUNTO DE RESTAURACION
-# ============================================================================
-
+# Punto de restauracion
 Write-Host ""
 Write-Host "    Preparando punto de restauracion de seguridad..." -ForegroundColor Yellow
 Show-ProgressBar -Percent 20 -Status "Configurando..."
@@ -219,10 +411,6 @@ if (-not $DryRun) {
     Show-ProgressComplete "Simulacion de punto de restauracion OK"
 }
 
-# ============================================================================
-# FUNCION AUXILIAR PARA CONSULTAR PASO
-# ============================================================================
-
 function Should-Proceed {
     param([int]$Step, [int]$Total, [string]$Title, [string]$Desc)
     if ($autoMode -or -not $script:askAll) { return $true }
@@ -241,9 +429,7 @@ $currentStep = 0
 $stepsApplied = 0
 $stepsSkipped = 0
 
-# ============================================================================
-# PASO 1: ANIMACIONES Y EFECTOS
-# ============================================================================
+# PASO 1: ANIMACIONES
 $currentStep++
 if (Should-Proceed -Step $currentStep -Total $totalSteps -Title "ANIMACIONES Y EFECTOS VISUALES" -Desc "Desactiva animaciones de ventanas, transparencias y retrasos de menus.") {
     Show-ProgressBar -Percent 10 -Status "Configurando registro de animaciones..."
@@ -268,9 +454,7 @@ if (Should-Proceed -Step $currentStep -Total $totalSteps -Title "ANIMACIONES Y E
     $stepsSkipped++
 }
 
-# ============================================================================
 # PASO 2: NOTIFICACIONES
-# ============================================================================
 $currentStep++
 if (Should-Proceed -Step $currentStep -Total $totalSteps -Title "NOTIFICACIONES Y SUGERENCIAS" -Desc "Desactiva popups, sugerencias y publicidad en el menu Inicio.") {
     Show-ProgressBar -Percent 20 -Status "Desactivando avisos y toasts..."
@@ -298,9 +482,7 @@ if (Should-Proceed -Step $currentStep -Total $totalSteps -Title "NOTIFICACIONES 
     $stepsSkipped++
 }
 
-# ============================================================================
 # PASO 3: PLAN DE ENERGIA
-# ============================================================================
 $currentStep++
 $energyDesc = "High Performance enchufado, Balanced en bateria."
 if ($isDesktop) { $energyDesc = "Plan Ultimate Performance sin suspension de disco ni sistema." }
@@ -346,9 +528,7 @@ if (Should-Proceed -Step $currentStep -Total $totalSteps -Title "PLAN DE ENERGIA
     $stepsSkipped++
 }
 
-# ============================================================================
 # PASO 4: SERVICIOS
-# ============================================================================
 $currentStep++
 $servicios = @(
     @{Name="DiagTrack";          Desc="Telemetria Microsoft"},
@@ -396,9 +576,7 @@ if (Should-Proceed -Step $currentStep -Total $totalSteps -Title "SERVICIOS EN SE
     $stepsSkipped++
 }
 
-# ============================================================================
 # PASO 5: APPS EN SEGUNDO PLANO
-# ============================================================================
 $currentStep++
 if (Should-Proceed -Step $currentStep -Total $totalSteps -Title "APPS EN SEGUNDO PLANO" -Desc "Impide que aplicaciones de la Store consuman CPU/RAM sin estar abiertas.") {
     Show-ProgressBar -Percent 50 -Status "Aplicando politicas de apps en fondo..."
@@ -420,9 +598,7 @@ if (Should-Proceed -Step $currentStep -Total $totalSteps -Title "APPS EN SEGUNDO
     $stepsSkipped++
 }
 
-# ============================================================================
 # PASO 6: CORTANA Y BUSQUEDA WEB
-# ============================================================================
 $currentStep++
 if (Should-Proceed -Step $currentStep -Total $totalSteps -Title "CORTANA Y BUSQUEDA WEB" -Desc "Desactiva Cortana y busquedas de Bing en el menu de Inicio.") {
     Show-ProgressBar -Percent 60 -Status "Configurando Windows Search..."
@@ -442,9 +618,7 @@ if (Should-Proceed -Step $currentStep -Total $totalSteps -Title "CORTANA Y BUSQU
     $stepsSkipped++
 }
 
-# ============================================================================
 # PASO 7: XBOX GAME BAR Y DVR
-# ============================================================================
 $currentStep++
 if (Should-Proceed -Step $currentStep -Total $totalSteps -Title "XBOX GAME BAR Y CAPTURAS" -Desc "Desactiva superposicion y grabacion constante en disco de partidas.") {
     Show-ProgressBar -Percent 70 -Status "Desactivando Game DVR..."
@@ -475,9 +649,7 @@ if (Should-Proceed -Step $currentStep -Total $totalSteps -Title "XBOX GAME BAR Y
     $stepsSkipped++
 }
 
-# ============================================================================
 # PASO 8: ARCHIVOS TEMPORALES
-# ============================================================================
 $currentStep++
 if (Should-Proceed -Step $currentStep -Total $totalSteps -Title "LIMPIEZA DE TEMPORALES" -Desc "Elimina archivos temporales acumulados y vacia la cache DNS.") {
     Show-ProgressBar -Percent 80 -Status "Limpiando directorios temporales..."
@@ -505,9 +677,7 @@ if (Should-Proceed -Step $currentStep -Total $totalSteps -Title "LIMPIEZA DE TEM
     $stepsSkipped++
 }
 
-# ============================================================================
 # PASO 9: RED (DESKTOP) O BATERIA (NOTEBOOK)
-# ============================================================================
 $currentStep++
 if ($isDesktop) {
     if (Should-Proceed -Step $currentStep -Total $totalSteps -Title "OPTIMIZACION DE RED" -Desc "Reduce latencia de red desactivando el algoritmo de Nagle.") {
@@ -554,9 +724,7 @@ if ($isDesktop) {
     }
 }
 
-# ============================================================================
 # PASO 10: TELEMETRIA Y PRIVACIDAD
-# ============================================================================
 $currentStep++
 if (Should-Proceed -Step $currentStep -Total $totalSteps -Title "TELEMETRIA Y PRIVACIDAD" -Desc "Reduce el envio innecesario de diagnosticos y apaga rastreo publicitario.") {
     Show-ProgressBar -Percent 95 -Status "Reduciendo telemetria..."
@@ -585,10 +753,7 @@ if (Should-Proceed -Step $currentStep -Total $totalSteps -Title "TELEMETRIA Y PR
     $stepsSkipped++
 }
 
-# ============================================================================
 # RESUMEN FINAL
-# ============================================================================
-
 Write-Host ""
 Write-Host "    ============================================================" -ForegroundColor Green
 Write-Host "    OPTIMIZACION COMPLETADA" -ForegroundColor Green
