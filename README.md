@@ -4,8 +4,16 @@ Herramienta interactiva y automatizada para optimizar Windows 10 y Windows 11 en
 
 ## ⚡ Ejecución Rápida
 
-### Opción 1: Comando directo en tu PC (Ya configurado)
-Simplemente abrí cualquier consola (CMD, PowerShell o `Win + R`) y escribí:
+### Opción 1: Comando directo desde cualquier PC (PowerShell Admin)
+Solo abrí **PowerShell como Administrador** y ejecutá este comando:
+```powershell
+irm https://raw.githubusercontent.com/Xaoxay/win-optimizer/main/Optimizar-Windows.ps1 | iex
+```
+
+---
+
+### Opción 2: Comando directo local (en tu PC)
+Si ya lo tenés instalado en tu máquina, abrí cualquier consola (CMD, PowerShell o `Win + R`) y escribí:
 ```cmd
 optimizar
 ```
@@ -13,17 +21,9 @@ optimizar
 
 ---
 
-### Opción 2: Ejecutar vía PowerShell (One-liner local)
+### Opción 3: Ejecutar archivo local vía PowerShell
 ```powershell
 powershell -ExecutionPolicy Bypass -File "$HOME\.gemini\antigravity\scratch\win-optimizer\Optimizar-Windows.ps1"
-```
-
----
-
-### Opción 3: Ejecutar desde cualquier PC vía GitHub (Web One-liner)
-Una vez subido a tu repositorio de GitHub, podés ejecutarlo en cualquier máquina sin descargar nada:
-```powershell
-irm https://raw.githubusercontent.com/<TU_USUARIO>/win-optimizer/main/Optimizar-Windows.ps1 | iex
 ```
 
 ---
